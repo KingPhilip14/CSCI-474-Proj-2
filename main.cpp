@@ -9,7 +9,7 @@
 const int MAX_GUESTS = 5;
 const int MAX_ROOMS = 3
 const char* activities[4] = {"swam at the swimming pool", "ate at the restaurant", 
-                             "exercised at the fitness center", "went to the business center"}
+                             "exercised at the fitness center", "visited the business center"}
 
 // create the variables for the program
 sem_t check_in_sem;
@@ -17,6 +17,14 @@ sem_t check_out_sem;
 sem_t available_room_sem[MAX_ROOMS];
 sem_t check_in_available_sem;
 sem_t check_out_available_sem;
+
+int totalGuests = 0;
+int pool = 0;                     	  
+int restaurant = 0;                  	  
+int fitnessCenter = 0;
+int businessCenter = 0;
+
+int activityTracker[4] = {pool, restaurant, fitnessCenter, businessCenter}
 
 void *guest(void *arg) {
     int guest_id = *((int *)arg);
@@ -50,8 +58,16 @@ void *guest(void *arg) {
     // if there is an available room, check in the guest
     printf("Guest %d receives Room %d and completes check-in\n", guest_id, room_assigned);
 
+    // increment the amount of guests that have been checked in 
+    totalGuests++;
+
     // grab a random activity from the list of activities and display what the guest does
-    printf("Guest %d %s\n", guest_id, activities[rand()]);
+    int rand_activity_num = rand() % 4;
+    printf("Guest %d %s\n", guest_id, activities[rand_activity_num]);
+
+    // increment the amount of times the specific activity was done by a guest
+    activityTracker[rand_activity_num]++;
+
     sleep(rand() % 3 + 1);
 
     // Check-out process
@@ -63,7 +79,7 @@ void *guest(void *arg) {
     sem_post(&check_out_sem);
 }
 
-void *check_in_receptionist(void *arg) {
+void *check_in(void *arg) {
     while (1) {
         sem_wait(&check_in_available_sem);
         sem_post(&check_in_available_sem);
@@ -73,7 +89,7 @@ void *check_in_receptionist(void *arg) {
     }
 }
 
-void *check_out_receptionist(void *arg) {
+void *check_out(void *arg) {
     while (1) {
         sem_wait(&check_out_available_sem);
         sem_post(&check_out_available_sem);
@@ -85,6 +101,9 @@ void *check_out_receptionist(void *arg) {
 }
 
 int main() {
+    // seeds a random number to prevent using the same seed for each execution
+    srand(time(nullptr));
+
     pthread_t guests[MAX_GUESTS];
     pthread_t check_in_thread, check_out_thread;
 
@@ -96,8 +115,8 @@ int main() {
         pthread_create(&guests[i], NULL, guest, &guest_ids[i]);
     }
 
-    pthread_create(&check_in_thread, NULL, check_in_receptionist, &guest_ids[0]);
-    pthread_create(&check_out_thread, NULL, check_out_receptionist, &guest_ids[0]);
+    pthread_create(&check_in_thread, NULL, check_in, &guest_ids[0]);
+    pthread_create(&check_out_thread, NULL, check_out, &guest_ids[0]);
 
     for (int i = 0; i < MAX_GUESTS; i++) {
         pthread_join(guests[i], NULL);
