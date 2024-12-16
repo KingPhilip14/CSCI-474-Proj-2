@@ -79,7 +79,7 @@ void *guest(void *arg) {
     sem_post(&check_out_sem);
 }
 
-void *checkIn(void *arg) {
+void *check_in(void *arg) {
     while (1) {
         sem_wait(&check_in_available_sem);
         sem_post(&check_in_available_sem);
@@ -89,7 +89,7 @@ void *checkIn(void *arg) {
     }
 }
 
-void *checkOut(void *arg) {
+void *check_out(void *arg) {
     while (1) {
         sem_wait(&check_out_available_sem);
         sem_post(&check_out_available_sem);
@@ -115,8 +115,8 @@ int main() {
         pthread_create(&guests[i], NULL, guest, &guest_ids[i]);
     }
 
-    pthread_create(&check_in_thread, NULL, checkIn, &guest_ids[0]);
-    pthread_create(&check_out_thread, NULL, checkOut, &guest_ids[0]);
+    pthread_create(&check_in_thread, NULL, check_in, &guest_ids[0]);
+    pthread_create(&check_out_thread, NULL, check_out, &guest_ids[0]);
 
     for (int i = 0; i < MAX_GUESTS; i++) {
         pthread_join(guests[i], NULL);
