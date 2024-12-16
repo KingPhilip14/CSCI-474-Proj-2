@@ -15,8 +15,6 @@ const char* activities[4] = {"swam at the swimming pool", "ate at the restaurant
 sem_t check_in_available_sem;
 sem_t check_out_available_sem;
 sem_t available_room_sem;
-sem_t check_in_available_sem;
-sem_t check_out_available_sem;
 
 int totalGuests = 0;
 int pool = 0;                     	  

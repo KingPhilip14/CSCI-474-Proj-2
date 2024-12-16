@@ -62,8 +62,12 @@ void* guest(void* arg) {
 
     printf("Guest %d goes to the check-out receptionist and returns room %d.\n", guest_id, room_id);
 
+
     // make the room the guest was just in available again for later
     available_room_queue.push(room_id);
+
+    // signal that the room that was returned is available again
+    //sem_post(&available_room_sem);
 
     printf("Guest %d receives the receipt.\n", guest_id);
 
@@ -83,7 +87,8 @@ void* check_in(void* arg) {
     while (true) {
         sem_wait(&check_in_available_sem);
         sem_post(&check_in_available_sem);
-        printf("The check-in receptionist greets Guest %d\n", *((int *)arg));
+        printf("The check-in receptionist greets Guest x\n");
+        // printf("The check-in receptionist greets Guest %d\n", *((int *)arg));
         sem_post(&check_in_available_sem);
         sleep(1);
     }
@@ -94,7 +99,8 @@ void* check_out(void* arg) {
     while (true) {
         sem_wait(&check_out_available_sem);
         sem_post(&check_out_available_sem);
-        printf("The check-out receptionist greets Guest %d and receives the key from room %d\n", *((int *)arg), *((int *)arg));
+        printf("The check-out receptionist greets Guest x and receives the key from room xx\n");
+        // printf("The check-out receptionist greets Guest %d and receives the key from room %d\n", *((int *)arg), *((int *)arg));
         printf("The receipt was printed\n");
         sem_post(&check_out_available_sem);
         sleep(1);
@@ -106,13 +112,13 @@ int main() {
     // generate a seed based on the current time to prevent the same seed from being used
     srand(time(nullptr));
 
-    // Initialize semaphores
+    // initialize semaphores
     sem_init(&available_room_sem, 0, NUM_ROOMS);
     sem_init(&check_in_available_sem, 0, 1);
     sem_init(&check_out_available_sem, 0, 1);
     sem_init(&mutex, 0, 1);
 
-    // Fill available rooms
+    // populate room queue
     for (int i = 0; i < NUM_ROOMS; i++) {
         available_room_queue.push(i);
     }
@@ -140,8 +146,8 @@ int main() {
     pthread_cancel(check_in_thread);
     pthread_cancel(check_out_thread);
 
-    // Print accounting
-    printf("\n--- Ending Information ---\n");
+    // print results
+    printf("\n--- Concluding Information ---\n");
     printf("Total Guests: %d\n", total_guests);
 
     for (int i = 0; i < guest_activities.size(); i++) {
