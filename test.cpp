@@ -8,13 +8,13 @@
 
 using namespace std;
 
-#define NUM_GUESTS 5
-#define NUM_ROOMS 3
+const int NUM_GUESTS = 5;
+const int NUM_ROOMS = 3;
 
 // setup variables for the project
-sem_t available_rooms;
-sem_t check_in_sem;
-sem_t check_out_sem;
+sem_t check_in_available_sem;
+sem_t check_out_available_sem;
+sem_t available_room_sem;
 sem_t mutex;
 
 queue<int> available_room_queue;
@@ -27,21 +27,24 @@ int total_guests = 0;
 void* guest(void* arg) {
     int guest_id = *(int*)arg;
 
-    // Guest arrives at the hotel
+    // a guest can only enter the hotel if a room is available
+    sem_wait(&available_room_sem);
+
+    // the guest arrives at the hotel
     printf("Guest %d enters the hotel.\n", guest_id);
 
-    // Check-in process
-    sem_wait(&check_in_sem);
+    // the guest must wait for check in to be available 
+    sem_wait(&check_in_available_sem);
     sem_wait(&mutex);
 
-    // Assign a room
+    // assign a room
     int room_id = available_room_queue.front();
     available_room_queue.pop();
     printf("Guest %d goes to the check-in.\n", guest_id);
     printf("Guest %d receives Room %d and completes check-in.\n", guest_id, room_id);
 
     sem_post(&mutex);
-    sem_post(&check_in_sem);
+    sem_post(&check_in_available_sem);
 
     // generate a random number to simulate a guest activity
     int rand_activity_index = rand() % guest_activities.size();
@@ -54,15 +57,18 @@ void* guest(void* arg) {
     sleep(rand() % 3 + 1);
 
     // Check-out process
-    sem_wait(&check_out_sem);
+    sem_wait(&check_out_available_sem);
     sem_wait(&mutex);
 
-    printf("Guest %d goes to the check-out and returns room %d.\n", guest_id, room_id);
+    printf("Guest %d goes to the check-out receptionist and returns room %d.\n", guest_id, room_id);
+
+    // make the room the guest was just in available again for later
     available_room_queue.push(room_id);
+
     printf("Guest %d receives the receipt.\n", guest_id);
 
     sem_post(&mutex);
-    sem_post(&check_out_sem);
+    sem_post(&check_out_available_sem);
 
     // Guest leaves
     printf("Guest %d leaves the hotel.\n", guest_id);
@@ -75,7 +81,10 @@ void* guest(void* arg) {
 
 void* check_in(void* arg) {
     while (true) {
-        // Busy-wait simulation for activity log
+        sem_wait(&check_in_available_sem);
+        sem_post(&check_in_available_sem);
+        printf("The check-in receptionist greets Guest %d\n", *((int *)arg));
+        sem_post(&check_in_available_sem);
         sleep(1);
     }
     pthread_exit(nullptr);
@@ -83,19 +92,24 @@ void* check_in(void* arg) {
 
 void* check_out(void* arg) {
     while (true) {
-        // Busy-wait simulation for activity log
+        sem_wait(&check_out_available_sem);
+        sem_post(&check_out_available_sem);
+        printf("The check-out receptionist greets Guest %d and receives the key from room %d\n", *((int *)arg), *((int *)arg));
+        printf("The receipt was printed\n");
+        sem_post(&check_out_available_sem);
         sleep(1);
     }
     pthread_exit(nullptr);
 }
 
 int main() {
+    // generate a seed based on the current time to prevent the same seed from being used
     srand(time(nullptr));
 
     // Initialize semaphores
-    sem_init(&available_rooms, 0, NUM_ROOMS);
-    sem_init(&check_in_sem, 0, 1);
-    sem_init(&check_out_sem, 0, 1);
+    sem_init(&available_room_sem, 0, NUM_ROOMS);
+    sem_init(&check_in_available_sem, 0, 1);
+    sem_init(&check_out_available_sem, 0, 1);
     sem_init(&mutex, 0, 1);
 
     // Fill available rooms
@@ -135,9 +149,9 @@ int main() {
     }
 
     // Clean up
-    sem_destroy(&available_rooms);
-    sem_destroy(&check_in_sem);
-    sem_destroy(&check_out_sem);
+    sem_destroy(&available_room_sem);
+    sem_destroy(&check_in_available_sem);
+    sem_destroy(&check_out_available_sem);
     sem_destroy(&mutex);
 
     return 0;

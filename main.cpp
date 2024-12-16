@@ -7,14 +7,14 @@
 
 // create constant values for the number of guests, the number of rooms, and activities guests can partake in 
 const int MAX_GUESTS = 5;
-const int MAX_ROOMS = 3
+const int MAX_ROOMS = 3;
 const char* activities[4] = {"swam at the swimming pool", "ate at the restaurant", 
-                             "exercised at the fitness center", "visited the business center"}
+                             "exercised at the fitness center", "visited the business center"};
 
 // create the variables for the program
-sem_t check_in_sem;
-sem_t check_out_sem;
-sem_t available_room_sem[MAX_ROOMS];
+sem_t check_in_available_sem;
+sem_t check_out_available_sem;
+sem_t available_room_sem;
 sem_t check_in_available_sem;
 sem_t check_out_available_sem;
 
@@ -24,7 +24,7 @@ int restaurant = 0;
 int fitnessCenter = 0;
 int businessCenter = 0;
 
-int activityTracker[4] = {pool, restaurant, fitnessCenter, businessCenter}
+int activityTracker[4] = {pool, restaurant, fitnessCenter, businessCenter};
 
 void *guest(void *arg) {
     int guest_id = *((int *)arg);
@@ -33,10 +33,10 @@ void *guest(void *arg) {
     printf("Guest %d enters the hotel\n", guest_id);
 
     // Check-in process
-    sem_wait(&check_in_sem);
+    sem_wait(&check_in_available_sem);
     printf("Guest %d goes to the check-in receptionist\n", guest_id);
     sem_wait(&check_in_available_sem);
-    sem_post(&check_in_sem);
+    sem_post(&check_in_available_sem);
 
     int room_assigned = -1;
 
@@ -52,7 +52,7 @@ void *guest(void *arg) {
     if (room_assigned == -1)
     {
         printf("Guest %d is waiting for a room\n", guest_id);
-        return;
+        return NULL;
     }
 
     // if there is an available room, check in the guest
@@ -71,12 +71,14 @@ void *guest(void *arg) {
     sleep(rand() % 3 + 1);
 
     // Check-out process
-    sem_wait(&check_out_sem);
+    sem_wait(&check_out_available_sem);
     printf("Guest %d goes to the check-out receptionist and returns room %d\n", guest_id, room_assigned);
     sem_post(&available_room_sem[room_assigned]);
     sem_post(&check_out_available_sem);
     printf("Guest %d receives the receipt\n", guest_id);
-    sem_post(&check_out_sem);
+    sem_post(&check_out_available_sem);
+
+    return NULL;
 }
 
 void *check_in(void *arg) {
@@ -84,9 +86,11 @@ void *check_in(void *arg) {
         sem_wait(&check_in_available_sem);
         sem_post(&check_in_available_sem);
         printf("The check-in receptionist greets Guest %d\n", *((int *)arg));
-        sem_post(&check_in_sem);
+        sem_post(&check_in_available_sem);
         sleep(1);
     }
+
+    return NULL;
 }
 
 void *check_out(void *arg) {
@@ -95,9 +99,11 @@ void *check_out(void *arg) {
         sem_post(&check_out_available_sem);
         printf("The check-out receptionist greets Guest %d and receives the key from room %d\n", *((int *)arg), *((int *)arg));
         printf("The receipt was printed\n");
-        sem_post(&check_out_sem);
+        sem_post(&check_out_available_sem);
         sleep(1);
     }
+
+    return NULL;
 }
 
 int main() {
@@ -107,12 +113,18 @@ int main() {
     pthread_t guests[MAX_GUESTS];
     pthread_t check_in_thread, check_out_thread;
 
+    sem_init(&check_in_available_sem, 0, 0);
+    sem_init(&check_out_available_sem, 0, 0);
+    sem_init(&available_room_sem, 0, MAX_ROOMS);
+    sem_init(&check_in_available_sem, 0, 0);
+    sem_init(&check_out_available_sem, 0, 0);
+
     int guest_ids[MAX_GUESTS];
 
     // create a thread for every guest
     for (int i = 0; i < MAX_GUESTS; i++) {
         guest_ids[i] = i;
-        pthread_create(&guests[i], NULL, guest, &guest_ids[i]);
+        pthread_create(&guests[i], NULL, *guest, &guest_ids[i]);
     }
 
     pthread_create(&check_in_thread, NULL, check_in, &guest_ids[0]);
