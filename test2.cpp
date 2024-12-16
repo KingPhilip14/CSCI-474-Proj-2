@@ -71,6 +71,9 @@ void* guest(void* arg) {
     total_guests++;
     sem_post(&mutex);
 
+    // signal that a room is now available again for the next guest
+    sem_post(&available_room_sem);
+
     // Signal the next guest to enter
     sem_post(&guest_ready_sem);
 
