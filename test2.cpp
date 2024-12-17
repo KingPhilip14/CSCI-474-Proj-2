@@ -30,7 +30,7 @@ void* guest(void* arg) {
     sem_wait(&available_room_sem);
 
     // the guest enters the hotel
-    printf("Guest %d enters the hotel.\n", guest_id);
+    printf("Guest %d enters the hotel\n", guest_id);
 
     // Guest waits to be served by the check-in receptionist
     sem_wait(&check_in_available_sem);
@@ -39,7 +39,7 @@ void* guest(void* arg) {
     int room_id = available_room_queue.front();
     available_room_queue.pop();
     printf("Guest %d goes to the check-in.\n", guest_id);
-    printf("Guest %d receives Room %d and completes check-in.\n", guest_id, room_id);
+    printf("Guest %d receives Room %d and completes check-in\n", guest_id, room_id);
 
     sem_post(&mutex);
     sem_post(&check_in_available_sem);
@@ -50,14 +50,14 @@ void* guest(void* arg) {
     sem_wait(&mutex);
     activity_counts[rand_activity_index]++;
     sem_post(&mutex);
-    printf("Guest %d goes to the %s for their activity.\n", guest_id, guest_activities[rand_activity_index].c_str());
+    printf("Guest %d goes to the %s for their activity\n", guest_id, guest_activities[rand_activity_index].c_str());
     sleep(rand() % 3 + 1);
 
     // Guest check-out
     sem_wait(&check_out_available_sem);
     sem_wait(&mutex);
 
-    printf("Guest %d goes to the check-out receptionist and returns room %d.\n", guest_id, room_id);
+    printf("Guest %d goes to the check-out receptionist and returns Room %d\n", guest_id, room_id);
 
     available_room_queue.push(room_id);
 
@@ -74,7 +74,7 @@ void* guest(void* arg) {
     // signal that a room is now available again for the next guest
     sem_post(&available_room_sem);
 
-    // Signal the next guest to enter
+    // signal the next guest to enter
     sem_post(&guest_ready_sem);
 
     pthread_exit(nullptr);
@@ -83,7 +83,7 @@ void* guest(void* arg) {
 void* check_in(void* arg) {
     while (true) {
         sem_wait(&check_in_available_sem);
-        printf("The check-in receptionist is available.\n");
+        printf("The check-in receptionist greets Guest x\n");
         sem_post(&check_in_available_sem);
         sleep(1);
     }
@@ -93,7 +93,7 @@ void* check_in(void* arg) {
 void* check_out(void* arg) {
     while (true) {
         sem_wait(&check_out_available_sem);
-        printf("The check-out receptionist is available.\n");
+        printf("The check-out receptionist is available\n");
         sem_post(&check_out_available_sem);
         sleep(1);
     }
@@ -107,8 +107,9 @@ int main() {
     sem_init(&check_in_available_sem, 0, 1);
     sem_init(&check_out_available_sem, 0, 1);
     sem_init(&mutex, 0, 1);
-    sem_init(&guest_ready_sem, 0, 0); // Initialize guest_ready_sem to 0, so first guest can enter
+    sem_init(&guest_ready_sem, 0, 0); 
 
+    // populate the available room queue to keep track of how many rooms are available
     for (int i = 0; i < NUM_ROOMS; i++) {
         available_room_queue.push(i);
     }
@@ -124,27 +125,28 @@ int main() {
         guest_ids[i] = i;
         pthread_create(&guests[i], nullptr, guest, &guest_ids[i]);
 
-        // After creating a guest thread, signal that they are ready to enter the hotel
+        // after creating a guest thread, signal that they are ready to enter the hotel
         sem_post(&guest_ready_sem);
     }
 
-    // Wait for all guests to finish
+    // wait for all guests to finish
     for (int i = 0; i < NUM_GUESTS; i++) {
         pthread_join(guests[i], nullptr);
     }
 
-    // Terminate receptionist threads
+    // terminate the receptionist threads
     pthread_cancel(check_in_thread);
     pthread_cancel(check_out_thread);
 
     printf("\n--- Ending Information ---\n");
     printf("Total Guests: %d\n", total_guests);
 
+    // print the stats for the simulation
     for (int i = 0; i < guest_activities.size(); i++) {
         printf("%s: %d\n", guest_activities[i].c_str(), activity_counts[i]);
     }
 
-    // Clean up
+    // destroy the semaphores that were used
     sem_destroy(&available_room_sem);
     sem_destroy(&check_in_available_sem);
     sem_destroy(&check_out_available_sem);
