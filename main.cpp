@@ -1,3 +1,11 @@
+/**
+ * Resources used:
+ * https://www.geeksforgeeks.org/thread-functions-in-c-c/
+ * https://www.geeksforgeeks.org/cpp-20-semaphore-header/
+ * https://pubs.opengroup.org/onlinepubs/009696699/functions/sem_init.html
+ */
+
+
 #include <iostream>
 #include <pthread.h>
 #include <semaphore.h>
