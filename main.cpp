@@ -56,11 +56,14 @@ void* guest(void* arg) {
 
     // notify the receptionist that a guest is ready
     sem_post(&check_in_available_sem);
+    printf("Guest %d goes to the check-in receptionist\n", guest_id);
     sem_wait(&guest_ready_sem);
 
     // get a room for the guest
     sem_wait(&mutex);
     int room_id = available_room_queue.front();
+    printf("Check-in receptionist assigns Room %d to Guest %d\n", room_id, guest_id);
+
     available_room_queue.pop();
     sem_post(&mutex);
     printf("Guest %d receives Room %d and completes check-in\n", guest_id, room_id);
@@ -77,17 +80,20 @@ void* guest(void* arg) {
     // guest check out logic
     sem_wait(&mutex);
     check_out_queue.push({guest_id, room_id});
+    printf("Guest %d goes to the check-out receptionist and returns Room %d\n", guest_id, room_id);
     sem_post(&mutex);
     sem_post(&check_out_available_sem); 
     sem_wait(&guest_ready_sem);         
-
-    // the guest leaves the hotel
-    printf("Guest %d leaves the hotel.\n", guest_id);
 
     // increment the total number of guests who have stayed at the hotel
     sem_wait(&mutex);
     total_guests++;
     sem_post(&mutex);
+
+    printf("Guest %d receives the receipt\n", guest_id);
+
+    // the guest leaves the hotel
+    printf("Guest %d leaves the hotel.\n", guest_id);
 
     // signal that a room is now available again for the next guest
     sem_post(&available_room_sem);
@@ -123,13 +129,18 @@ void* check_out(void* arg) {
 
         // retrieve the guest ID and room ID from the check-out queue
         sem_wait(&mutex);
+
         pair<int, int> check_out_info = check_out_queue.front();
+        int guest_id = check_out_info.first;
+        int room_id = check_out_info.second;
+
         check_out_queue.pop();
         sem_post(&mutex);
 
         // the receptionist greets the guest
         printf("The check-out receptionist greets Guest %d and receives the key for Room %d\n",
-               check_out_info.first, check_out_info.second);
+               guest_id, room_id);
+        printf("The receipt was printed\n");
 
         // signal the guest to proceed with the check-out process
         sem_post(&guest_ready_sem);
